@@ -62,8 +62,10 @@
       <circle cx="60" cy="12" r="4" fill="#d9b8bc"/>
       <circle cx="74" cy="13" r="7" fill="#a8977f"/>
       <circle cx="74" cy="13" r="3.5" fill="#d9b8bc"/>
-      <!-- eye -->
-      <circle cx="70" cy="24" r="2.6" fill="#2b2b2b"/>
+      <!-- eye (open) -->
+      <circle id="eye-open" cx="70" cy="24" r="2.6" fill="#2b2b2b"/>
+      <!-- eye (closed, shown only while paralyzed) -->
+      <path id="eye-closed" d="M66 24 Q70 27 74 24" fill="none" stroke="#2b2b2b" stroke-width="2" stroke-linecap="round" style="display:none"/>
       <!-- nose -->
       <circle cx="81" cy="28" r="2.8" fill="#d98a8f"/>
       <!-- whiskers -->
@@ -74,7 +76,7 @@
       </g>
     </svg>
   </div>
-  <div id="hint">Click anywhere to scare the mouse</div>
+  <div id="hint">Click the mouse to paralyze it, or elsewhere to scare it</div>
 
 <script>
 (function () {
@@ -82,6 +84,17 @@
 
   const stage = document.getElementById("stage");
   const el = document.getElementById("mouse");
+  const eyeOpen = document.getElementById("eye-open");
+  const eyeClosed = document.getElementById("eye-closed");
+
+  // Hit radius: a click within this many px of the mouse center counts as a
+  // direct hit (approximates the body, robust against rotation).
+  const HIT_RADIUS = 30;
+  // How long the mouse stays paralyzed after a direct hit, in milliseconds.
+  const PARALYSIS_MS = 3000;
+  // Tremble amplitudes while paralyzed (re-randomized every frame).
+  const TREMBLE_PX = 3;    // positional shake, +/- px
+  const TREMBLE_DEG = 6;   // rotational twitch, +/- degrees
 
   // Mouse SVG dimensions (keep in sync with CSS width/height).
   const W = 90, H = 54;
@@ -101,7 +114,12 @@
     vx: 0,
     vy: 0,
     angle: 0, // radians, direction of travel (snaps instantly on change)
+    paralyzedUntil: 0, // timestamp (ms) until which the mouse is paralyzed; 0 = free
   };
+
+  function isParalyzed(now) {
+    return now < state.paralyzedUntil;
+  }
 
   function randomRange(lo, hi) {
     return lo + Math.random() * (hi - lo);
@@ -145,8 +163,40 @@
     scheduleNextChange();
   }
 
+  // A direct hit paralyzes the mouse: it freezes in place (wiggling, eyes shut)
+  // for PARALYSIS_MS, then resumes a fresh random wander.
+  function paralyze(now) {
+    state.paralyzedUntil = now + PARALYSIS_MS;
+    state.vx = 0;
+    state.vy = 0;
+    eyeOpen.style.display = "none";
+    eyeClosed.style.display = "";
+    // Hold off the random-change clock until paralysis ends.
+    if (changeTimer !== null) window.clearTimeout(changeTimer);
+    changeTimer = window.setTimeout(() => {
+      wakeUp();
+    }, PARALYSIS_MS);
+  }
+
+  // End paralysis: open the eyes and start a fresh random wander.
+  function wakeUp() {
+    state.paralyzedUntil = 0;
+    eyeOpen.style.display = "";
+    eyeClosed.style.display = "none";
+    randomizeVelocity();
+    scheduleNextChange();
+  }
+
   window.addEventListener("pointerdown", (e) => {
-    scareFrom(e.clientX, e.clientY);
+    const now = performance.now();
+    // While paralyzed, the mouse can't react to any click.
+    if (isParalyzed(now)) return;
+    const dist = Math.hypot(state.x - e.clientX, state.y - e.clientY);
+    if (dist <= HIT_RADIUS) {
+      paralyze(now);
+    } else {
+      scareFrom(e.clientX, e.clientY);
+    }
   });
 
   // Keep the mouse inside the viewport if the window shrinks.
@@ -165,6 +215,28 @@
     lastTime = now;
     // Guard against huge dt after a background tab resumes.
     if (dt > 0.1) dt = 0.1;
+
+    if (isParalyzed(now)) {
+      // Frozen in place: wiggle like a struggling, paralyzed animal. Apply a
+      // small per-frame positional and rotational jitter around the current
+      // position/heading without actually drifting (state.x/y stay put).
+      const halfW = W / 2, halfH = H / 2;
+      const jx = (Math.random() * 2 - 1) * TREMBLE_PX;
+      const jy = (Math.random() * 2 - 1) * TREMBLE_PX;
+      const jrot = (Math.random() * 2 - 1) * TREMBLE_DEG;
+
+      const facingLeft = Math.cos(state.angle) < 0;
+      const deg = (facingLeft ? Math.PI - state.angle : state.angle) * 180 / Math.PI + jrot;
+      const flipY = facingLeft ? -1 : 1;
+
+      el.style.transform =
+        "translate(" + (state.x - halfW + jx) + "px," + (state.y - halfH + jy) + "px) " +
+        "rotate(" + deg + "deg) scaleY(" + flipY + ")";
+      el.style.transformOrigin = halfW + "px " + halfH + "px";
+
+      requestAnimationFrame(frame);
+      return;
+    }
 
     state.x += state.vx * dt;
     state.y += state.vy * dt;
