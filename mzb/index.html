@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Petra Klabouchová / Muž z Brna</title>
+    <link rel="stylesheet" href="css/normalize.css">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<header>
+    <img src="images/cover.jpg" alt="Petra Klabouchová – Muž z Brna" class="cover-image">
+</header>
+
+<main>
+    <section class="audio-player">
+        <audio id="audioPlayer" controls preload="auto" aria-label="Přehrávač audioknihy">
+            <source id="audioSource" type="audio/mp4">
+            Váš prohlížeč nepodporuje přehrávání audia.
+        </audio>
+    </section>
+
+    <section class="chapters">
+        <ul id="chapterList" class="chapter-list" aria-label="Seznam kapitol"></ul>
+    </section>
+</main>
+
+<script src="js/main.js" type="module"></script>
+</body>
+</html>

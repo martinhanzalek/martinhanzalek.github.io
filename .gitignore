@@ -1,0 +1,33 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Thumbnails
+.Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# Node modules (if you ever add build tools)
+node_modules/
+npm-debug.log*
+
+# Environment variables
+.env
+.env.local
+
+# Large audio files (not tracked in git)
+mzb/audio/*.m4a

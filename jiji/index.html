@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Running Mouse</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #f4f1ea;
+    cursor: crosshair;
+  }
+  #stage {
+    position: fixed;
+    inset: 0;
+  }
+  #mouse {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 90px;
+    height: 54px;
+    /* transform set by JS: translate to position, rotate to heading */
+    will-change: transform;
+  }
+  #hint {
+    position: fixed;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: system-ui, sans-serif;
+    font-size: 14px;
+    color: #9a8f7a;
+    user-select: none;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+  <div id="stage">
+    <!--
+      The mouse is drawn facing RIGHT (nose at the +x end) so that a rotation
+      equal to the velocity's angle points the nose in the direction of travel.
+    -->
+    <svg id="mouse" viewBox="0 0 90 54" xmlns="http://www.w3.org/2000/svg">
+      <!-- tail: trails behind (left side), curling -->
+      <path d="M8 30 C -6 28, -4 44, 10 40" fill="none" stroke="#6b5d4f" stroke-width="3" stroke-linecap="round"/>
+      <!-- hind foot -->
+      <ellipse cx="30" cy="46" rx="6" ry="3" fill="#8a7a66"/>
+      <!-- front foot -->
+      <ellipse cx="58" cy="47" rx="5" ry="3" fill="#8a7a66"/>
+      <!-- body -->
+      <ellipse cx="40" cy="32" rx="30" ry="18" fill="#9a8a74"/>
+      <!-- head -->
+      <circle cx="66" cy="26" r="15" fill="#a8977f"/>
+      <!-- ears -->
+      <circle cx="60" cy="12" r="8" fill="#a8977f"/>
+      <circle cx="60" cy="12" r="4" fill="#d9b8bc"/>
+      <circle cx="74" cy="13" r="7" fill="#a8977f"/>
+      <circle cx="74" cy="13" r="3.5" fill="#d9b8bc"/>
+      <!-- eye -->
+      <circle cx="70" cy="24" r="2.6" fill="#2b2b2b"/>
+      <!-- nose -->
+      <circle cx="81" cy="28" r="2.8" fill="#d98a8f"/>
+      <!-- whiskers -->
+      <g stroke="#6b5d4f" stroke-width="1" stroke-linecap="round">
+        <line x1="80" y1="29" x2="92" y2="26"/>
+        <line x1="80" y1="30" x2="92" y2="31"/>
+        <line x1="80" y1="31" x2="92" y2="36"/>
+      </g>
+    </svg>
+  </div>
+  <div id="hint">Click anywhere to scare the mouse</div>
+
+<script>
+(function () {
+  "use strict";
+
+  const stage = document.getElementById("stage");
+  const el = document.getElementById("mouse");
+
+  // Mouse SVG dimensions (keep in sync with CSS width/height).
+  const W = 90, H = 54;
+
+  // Speed bounds scaled to the viewport diagonal, in px/second.
+  // A frozen mouse is no fun, and a blur is unreadable, so we clamp both ends.
+  function viewportScale() {
+    return Math.hypot(window.innerWidth, window.innerHeight);
+  }
+  function minSpeed() { return viewportScale() * 0.08; } // gentle trot
+  function maxSpeed() { return viewportScale() * 0.22; } // quick dart
+
+  // State: position is the mouse's CENTER; velocity in px/second.
+  const state = {
+    x: window.innerWidth / 2,
+    y: window.innerHeight / 2,
+    vx: 0,
+    vy: 0,
+    angle: 0, // radians, direction of travel (snaps instantly on change)
+  };
+
+  function randomRange(lo, hi) {
+    return lo + Math.random() * (hi - lo);
+  }
+
+  // Pick a brand-new random heading and speed, snapping instantly.
+  function randomizeVelocity() {
+    const heading = Math.random() * Math.PI * 2;
+    const speed = randomRange(minSpeed(), maxSpeed());
+    state.vx = Math.cos(heading) * speed;
+    state.vy = Math.sin(heading) * speed;
+  }
+
+  // Schedule the next random change at a random interval (0.5s–3s).
+  let changeTimer = null;
+  function scheduleNextChange() {
+    const delay = randomRange(500, 3000);
+    changeTimer = window.setTimeout(() => {
+      randomizeVelocity();
+      scheduleNextChange();
+    }, delay);
+  }
+
+  // Clicking scares the mouse: it darts away from the click point at top speed.
+  function scareFrom(px, py) {
+    let dx = state.x - px;
+    let dy = state.y - py;
+    let dist = Math.hypot(dx, dy);
+    if (dist < 0.0001) {
+      // Clicked dead-center on it: pick a random escape direction.
+      const a = Math.random() * Math.PI * 2;
+      dx = Math.cos(a);
+      dy = Math.sin(a);
+      dist = 1;
+    }
+    const speed = maxSpeed();
+    state.vx = (dx / dist) * speed;
+    state.vy = (dy / dist) * speed;
+    // Reset the random-change clock so the scare isn't instantly overridden.
+    if (changeTimer !== null) window.clearTimeout(changeTimer);
+    scheduleNextChange();
+  }
+
+  window.addEventListener("pointerdown", (e) => {
+    scareFrom(e.clientX, e.clientY);
+  });
+
+  // Keep the mouse inside the viewport if the window shrinks.
+  window.addEventListener("resize", clampToBounds);
+  function clampToBounds() {
+    const halfW = W / 2, halfH = H / 2;
+    state.x = Math.min(Math.max(state.x, halfW), window.innerWidth - halfW);
+    state.y = Math.min(Math.max(state.y, halfH), window.innerHeight - halfH);
+  }
+
+  // Animation loop.
+  let lastTime = null;
+  function frame(now) {
+    if (lastTime === null) lastTime = now;
+    let dt = (now - lastTime) / 1000;
+    lastTime = now;
+    // Guard against huge dt after a background tab resumes.
+    if (dt > 0.1) dt = 0.1;
+
+    state.x += state.vx * dt;
+    state.y += state.vy * dt;
+
+    // Bounce off the edges, using the mouse's half-extent as the margin.
+    const halfW = W / 2, halfH = H / 2;
+    if (state.x < halfW) {
+      state.x = halfW;
+      state.vx = Math.abs(state.vx);
+    } else if (state.x > window.innerWidth - halfW) {
+      state.x = window.innerWidth - halfW;
+      state.vx = -Math.abs(state.vx);
+    }
+    if (state.y < halfH) {
+      state.y = halfH;
+      state.vy = Math.abs(state.vy);
+    } else if (state.y > window.innerHeight - halfH) {
+      state.y = window.innerHeight - halfH;
+      state.vy = -Math.abs(state.vy);
+    }
+
+    // Face the direction of travel. Only update when actually moving so a
+    // momentarily stationary mouse keeps its last sensible heading.
+    if (state.vx !== 0 || state.vy !== 0) {
+      state.angle = Math.atan2(state.vy, state.vx);
+    }
+    // When heading left, a plain rotation would turn the mouse belly-up.
+    // Flip it vertically instead so it stays upright while facing left,
+    // and mirror the angle so the nose still leads.
+    const facingLeft = Math.cos(state.angle) < 0;
+    const deg = (facingLeft ? Math.PI - state.angle : state.angle) * 180 / Math.PI;
+    const flipY = facingLeft ? -1 : 1;
+
+    // Position by the center, then rotate/flip about the center.
+    el.style.transform =
+      "translate(" + (state.x - halfW) + "px," + (state.y - halfH) + "px) " +
+      "rotate(" + deg + "deg) scaleY(" + flipY + ")";
+    el.style.transformOrigin = halfW + "px " + halfH + "px";
+
+    requestAnimationFrame(frame);
+  }
+
+  // Kick things off.
+  randomizeVelocity();
+  scheduleNextChange();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>

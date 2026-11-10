@@ -1,0 +1,146 @@
+:root {
+    --primary-color: #2c3e50;
+    --secondary-color: #3498db;
+    --accent-color: #e8f4f8;
+    --background-color: #ffffff;
+    --text-color: #333;
+    --border-color: #ddd;
+    --active-bg: #d4edff;
+    --hover-bg: #f0f0f0;
+    --spacing-xs: 0.5rem;
+    --spacing-sm: 1rem;
+    --spacing-md: 1.5rem;
+    --spacing-lg: 2rem;
+    --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-family);
+    color: var(--text-color);
+    line-height: 1.6;
+    margin: 0;
+    padding: 0;
+    min-block-size: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+header {
+    background-color: var(--background-color);
+    padding-block: var(--spacing-lg);
+    padding-inline: var(--spacing-sm);
+    text-align: center;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.cover-image {
+    width: 100%;
+    max-width: min(300px, 90vw);
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3),
+                0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: var(--spacing-sm);
+    max-inline-size: 800px;
+    inline-size: 100%;
+    margin-inline: auto;
+}
+
+.audio-player {
+    margin-block-end: var(--spacing-md);
+}
+
+#audioPlayer {
+    inline-size: 100%;
+    border-radius: 8px;
+}
+
+.chapters h2 {
+    font-size: 1.25rem;
+    margin-block-start: 0;
+    margin-block-end: var(--spacing-sm);
+    color: var(--primary-color);
+}
+
+.chapter-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.chapter-list li {
+    padding: var(--spacing-sm);
+    border: 1px solid var(--border-color);
+    border-block-start: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    transition: background-color 0.2s ease, transform 0.1s ease;
+    user-select: none;
+}
+
+.chapter-list li:first-child {
+    border-block-start: 1px solid var(--border-color);
+    border-start-start-radius: 4px;
+    border-start-end-radius: 4px;
+}
+
+.chapter-list li:last-child {
+    border-end-start-radius: 4px;
+    border-end-end-radius: 4px;
+}
+
+.chapter-list li:hover {
+    background-color: var(--hover-bg);
+}
+
+.chapter-list li:focus {
+    outline: 2px solid var(--secondary-color);
+    outline-offset: -2px;
+}
+
+.chapter-list li:active {
+    transform: scale(0.98);
+}
+
+.chapter-list li.active {
+    background-color: var(--active-bg);
+    font-weight: 600;
+    border-inline-start: 4px solid var(--secondary-color);
+    padding-inline-start: calc(var(--spacing-sm) - 3px);
+}
+
+.chapter-list li.active::before {
+    content: '▶';
+    color: var(--secondary-color);
+    font-size: 0.875rem;
+    margin-inline-end: var(--spacing-xs);
+}
+
+@media (min-width: 768px) {
+    main {
+        padding: var(--spacing-lg);
+    }
+
+    header {
+        padding-block: calc(var(--spacing-lg) * 1.5);
+    }
+
+    .cover-image {
+        max-width: 400px;
+    }
+}
