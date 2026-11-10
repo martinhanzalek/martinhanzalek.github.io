@@ -38,6 +38,16 @@
     user-select: none;
     pointer-events: none;
   }
+  #score {
+    position: fixed;
+    bottom: 12px;
+    left: 12px;
+    font-family: system-ui, sans-serif;
+    font-size: 14px;
+    color: #9a8f7a;
+    user-select: none;
+    pointer-events: none;
+  }
 </style>
 </head>
 <body>
@@ -77,6 +87,7 @@
     </svg>
   </div>
   <div id="hint">Click the mouse to paralyze it, or elsewhere to scare it</div>
+  <div id="score">Hits: 0</div>
 
 <script>
 (function () {
@@ -86,6 +97,10 @@
   const el = document.getElementById("mouse");
   const eyeOpen = document.getElementById("eye-open");
   const eyeClosed = document.getElementById("eye-closed");
+  const scoreEl = document.getElementById("score");
+
+  // Running tally of successful direct hits (resets on page reload).
+  let score = 0;
 
   // Hit radius: a click within this many px of the mouse center counts as a
   // direct hit (approximates the body, robust against rotation).
@@ -167,6 +182,8 @@
   // for PARALYSIS_MS, then resumes a fresh random wander.
   function paralyze(now) {
     state.paralyzedUntil = now + PARALYSIS_MS;
+    score += 1;
+    scoreEl.textContent = "Hits: " + score;
     state.vx = 0;
     state.vy = 0;
     eyeOpen.style.display = "none";
